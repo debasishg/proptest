@@ -5,27 +5,12 @@ import java.util.{ Date, Calendar }
 
 import scalaz._
 import Scalaz._
-import Currency._
-import smart._
 
-object Portfolios {
+object portfolios {
 
   val today = Calendar.getInstance.getTime
 
-  case class Money(amount: BigDecimal, val ccy: Currency) {
-    def +(m: Money): Try[Money] = Try { 
-      if (ccy != m.ccy) throw new IllegalArgumentException(s"Currencies need to match")
-      else Money(amount + m.amount, ccy)
-    }
-    def -(m: Money): Try[Money] = Try { 
-      if (ccy != m.ccy) throw new IllegalArgumentException(s"Currencies need to match")
-      else Money(amount - m.amount, ccy)
-    }
-  }
-
-  case class Position(account: Account, balance: Money, asOf: Date)
-
-  trait Banking {
+  trait Banking[Account, Position, Currency, Money] {
     sealed trait AccountType
     case object Checking extends AccountType
     case object Savings extends AccountType
@@ -41,10 +26,23 @@ object Portfolios {
     }
   }
 
-  import Account._
-  import Money._
+  case class Money(amount: BigDecimal, val ccy: Currency) {
+    def +(m: Money): Try[Money] = Try { 
+      if (ccy != m.ccy) throw new IllegalArgumentException(s"Currencies need to match")
+      else Money(amount + m.amount, ccy)
+    }
+    def -(m: Money): Try[Money] = Try { 
+      if (ccy != m.ccy) throw new IllegalArgumentException(s"Currencies need to match")
+      else Money(amount - m.amount, ccy)
+    }
+  }
 
-  object Banking extends Banking {
+  import smart._
+  import Account._
+
+  case class Position(account: Account, balance: Money, asOf: Date)
+
+  object Banking extends Banking[Account, Position, Currency, Money] {
     def open(no: String, name: String, openingDate: Date, rate: Option[BigDecimal], 
       tp: AccountType): Try[Account] = tp match {
 
@@ -76,7 +74,7 @@ object Portfolios {
     }
 
     def position(account: Account, ccy: Currency, asOf: Date): Try[Position] = Try {
-      Position(account, Money(BigDecimal(10000), USD), asOf)
+      Position(account, Money(BigDecimal(10000), ccy), asOf)
     }
 
     def op = for {
